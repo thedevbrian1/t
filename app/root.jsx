@@ -6,6 +6,7 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 import "./styles/tailwind.css";
+import "./styles/subscribe.css";
 
 export function Layout({ children }) {
   return (

@@ -20,7 +20,8 @@ module.exports = {
       colors: {
         brand: {
           'black': '#111b1d',
-          'purple': '#B398B0'
+          'purple': '#B398B0',
+          'light-purple': '#cab7c8'
         }
       },
       keyframes: {

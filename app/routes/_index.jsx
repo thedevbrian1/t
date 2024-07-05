@@ -1,5 +1,12 @@
-import { Link } from "@remix-run/react";
-import { BusinessDealIllustration, FacebookIcon, InstagramIcon, MoneyTransferIllustration, PaymentsIllustration, ProfileIllustration, StepsIllustration, TiktokIcon, XIcon } from "~/components/Icon";
+import { Form, Link, json, useActionData, useNavigation } from "@remix-run/react";
+import FormSpacer from "~/components/FormSpacer";
+import { BusinessDealIllustration, FacebookIcon, InstagramIcon, MoneyTransferIllustration, PaymentsIllustration, ProfileIllustration, ThreeDots, TiktokIcon, WaitlistIllustration, XIcon } from "~/components/Icon";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { validateName, validateEmail, badRequest } from "~/.server/validation";
+import { subscribe } from "~/.server/email";
+import { useEffect, useRef } from "react";
 
 export const meta = () => {
 	return [
@@ -7,6 +14,38 @@ export const meta = () => {
 		{ name: "description", content: "Welcome to Remix!" },
 	];
 };
+
+export async function action({ request }) {
+	let formData = await request.formData();
+	let action = formData.get('_action');
+
+	switch (action) {
+		case 'waitlist': {
+			let name = formData.get('name');
+			let email = formData.get('email');
+
+			let fieldErrors = {
+				name: validateName(name),
+				email: validateEmail(email)
+			};
+
+			if (Object.values(fieldErrors).some(Boolean)) {
+				return badRequest({ fieldErrors });
+			}
+
+			return json({ id: 1 });
+
+
+
+			let { id } = await subscribe(name, email);
+
+			if (id) {
+				return json({ id });
+			}
+		}
+	}
+	return null;
+}
 
 export default function Index() {
 	return (
@@ -17,6 +56,7 @@ export default function Index() {
 				<img src="https://blog.deriv.com/wp-content/uploads/2022/11/29beb004-368f-4fbd-9c6e-3c7d62c95792.jpeg" alt="" className="w-full h-full object-cover rounded-lg" />
 			</div>
 			<Features />
+			<Waitlist />
 			<Footer />
 		</main>
 	);
@@ -30,7 +70,7 @@ function Hero() {
 					<h1 className="font-bold text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-center lg:text-left">Master Trading Safely: Simulate, Learn, and <span className="text-green-500">Profit</span></h1>
 					<p className="text-xl text-center lg:text-left mt-4 md:mt-8 text-gray-200">Interactive learning and real time trading simulation at your fingertips</p>
 					<div className="mt-8 flex justify-center lg:justify-start">
-						<Link to="/" className="bg-[#B398B0] text-black capitalize px-8 py-4 rounded-lg">Get started now</Link>
+						<Link to="#waitlist" className="bg-[#B398B0] text-black capitalize px-8 py-4 rounded-lg">Get started now</Link>
 					</div>
 				</div>
 				<div className=" h-full">
@@ -86,11 +126,8 @@ function HowItWorks() {
 					))}
 				</ol>
 			</div>
-			<div className="mt-8 flex justify-center">
+			{/* <div className="mt-8 flex justify-center">
 				<Link to="/" className="bg-[#B398B0] text-black capitalize px-8 py-4 rounded-lg">Get started now</Link>
-			</div>
-			{/* <div>
-				<StepsIllustration />
 			</div> */}
 		</section>
 	);
@@ -134,13 +171,102 @@ function Features() {
 					</li>
 				))}
 			</ul>
-			<div className="mt-8 flex justify-center">
+			{/* <div className="mt-8 flex justify-center">
 				<Link to="/" className="bg-[#B398B0] text-black capitalize px-8 py-4 rounded-lg">Get started now</Link>
-			</div>
+			</div> */}
 		</section>
 	);
 }
 
+function Waitlist() {
+	let actionData = useActionData();
+	let navigation = useNavigation();
+
+	let formRef = useRef(null);
+	let mountedRef = useRef(false);
+	let nameRef = useRef(null);
+
+	let emailRef = useRef(null);
+
+
+	console.log({ actionData });
+
+	let isSubmitting = navigation.state === 'submitting';
+
+	useEffect(() => {
+		if (!isSubmitting) {
+			console.log('Resetting...');
+			formRef.current?.reset();
+		}
+	}, [isSubmitting]);
+
+	return (
+		<section id="waitlist" className="mt-24 md:mt-36 lg:mt-40 px-6 md:px-12 xl:px-0 lg:max-w-5xl mx-auto grid lg:grid-cols-2 gap-8 lg:gap-28 items-center">
+			<div className="subscribe">
+				<div aria-hidden={!!actionData?.id}>
+					<h2 className="font-semibold text-3xl lg:text-5xl">Be among the first to try it out</h2>
+					<p className="text-lg mt-4 text-gray-400">You will be the first to be notified when we launch</p>
+
+					<Form
+						method="post"
+						replace
+						className="mt-4"
+						ref={formRef}
+					>
+						<fieldset className="space-y-6">
+							<FormSpacer>
+								<Label htmlFor="name" className="flex gap-2 items-center">Name {actionData?.fieldErrors?.name
+									? <p className="text-red-500 text-sm">{actionData.fieldErrors.name}</p>
+									: null
+								}</Label>
+								<Input
+									ref={nameRef}
+									type="text"
+									name="name"
+									id="name"
+									placeholder="John Doe"
+									className={`bg-gray-200 text-gray-800 focus-visible:ring focus-visible:ring-yellow-500 transition duration-300 ease-in-out ${actionData?.fieldErrors?.name ? 'border border-red-500' : ''}`}
+								/>
+							</FormSpacer>
+							<FormSpacer>
+								<Label htmlFor="email" className="flex gap-2 items-center">Email {actionData?.fieldErrors?.email
+									? <p className="text-red-500 text-sm">{actionData.fieldErrors.email}</p>
+									: null
+								}</Label>
+								<Input
+									ref={emailRef}
+									type="email"
+									name="email"
+									id="email"
+									placeholder="johndoe@email.com"
+									className={`bg-gray-200 text-gray-800 focus-visible:ring focus-visible:ring-yellow-500 transition duration-300 ease-in-out ${actionData?.fieldErrors?.email ? 'border border-red-500' : ''}`}
+								/>
+
+							</FormSpacer>
+							<Button
+								type="submit"
+								name="_action"
+								value="waitlist"
+								className="w-full bg-brand-purple hover:bg-brand-light-purple transition-colors duration-300 ease-in-out text-black">
+								{isSubmitting ? <span className="w-10"><ThreeDots /></span> : 'Join our waitlist'}
+							</Button>
+						</fieldset>
+					</Form>
+				</div>
+				<div aria-hidden={!actionData?.id} className="text-center">
+					<h2 className="font-semibold text-3xl lg:text-5xl">You're Subscribed!</h2>
+					<p className="mt-4">Yow will be receive updates on your email</p>
+					<div className="mt-8">
+						<Link to="." preventScrollReset className="bg-brand-purple text-black rounded-lg px-6 py-3">Start over</Link>
+					</div>
+				</div>
+			</div>
+			<div>
+				<WaitlistIllustration />
+			</div>
+		</section>
+	);
+}
 function Footer() {
 	let socialLinks = [
 		{
